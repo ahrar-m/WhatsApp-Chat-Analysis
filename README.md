@@ -1,6 +1,6 @@
 # 📊 WhatsApp Chat Analyzer
 
-Transform your raw WhatsApp**.txt**exports into a beautiful, interactive, local web dashboard. This tool allows you to deeply analyze your conversations, texting habits, and group dynamics entirely offline, ensuring your private data never leaves your machine.
+Transform your raw WhatsApp **.txt** exports into a beautiful, interactive, local web dashboard. This tool allows you to deeply analyze your conversations, texting habits, and group dynamics entirely offline, ensuring your private data never leaves your machine.
 
 ## ✨ Features
 
@@ -35,7 +35,7 @@ It is highly recommended to run this project inside a Python Virtual Environment
 **1. Clone the repository and navigate into the directory**: 
 
 ```bash
-git clone https://www.google.com/search?q=https://github.com/YOUR_USERNAME/WhatsApp-Chat-Analysis.git
+git clone https://github.com/ahrar-m/WhatsApp-Chat-Analysis.git
 cd WhatsApp-Chat-Analysis
 ```
 
@@ -68,7 +68,7 @@ pip install pandas gradio plotly emoji
 
 1. Open WhatsApp on your phone.
 2. Open the individual or group chat you want to analyze.
-3. Tap the three dots (Menu) >**More**>**Export chat**.
+3. Tap the three dots (Menu) > **More** > **Export chat**.
 4. Choose **Without media** (this tool currently analyzes text data).
 5. Transfer the **.txt** file to your computer and place it in this project folder.
 
@@ -97,3 +97,13 @@ python dashboard.py
 ## Issues
 
 - Support for Emojis
+
+## Future Scope
+
+- Standalone **.exe** or **.html** file
+- Example screenshots
+
+## Special Thanks to
+
+- **Google Gemini** for enabling me to build the scripts with minimum effort.
+- **Ex Girlfriend** for motivating me to analyze amazing/toxic trends in our chat.
