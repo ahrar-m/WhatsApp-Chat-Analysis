@@ -102,6 +102,7 @@ python dashboard.py
 
 - Standalone **.exe** or **.html** file
 - Example screenshots
+- Installation instructions for Android (via Termux)
 
 ## Special Thanks to
 
