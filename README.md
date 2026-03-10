@@ -96,13 +96,15 @@ python dashboard.py
 
 ## Issues
 
-- Support for Emojis
+- Support for Emojis on Linux/Windows (currently works well with Android)
+- First bar of top words graph cropped
 
 ## Future Scope
 
 - Standalone **.exe** or **.html** file
 - Example screenshots
 - Installation instructions for Android (via Termux)
+- Graph Resolution control
 
 ## Special Thanks to
 

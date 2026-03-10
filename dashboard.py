@@ -188,7 +188,7 @@ with gr.Blocks() as app:
     # Row 3: Chart Customizations
     with gr.Row():
         custom_stop_words_input = gr.Textbox(label="Custom Stop Words (comma-separated)", placeholder="e.g., haha, yeah, ok, lol", lines=1, scale=3)
-        top_n_input = gr.Slider(label="Top Words/Emojis", minimum=5, maximum=100, step=5, value=25, interactive=True, scale=2)
+        top_n_input = gr.Slider(label="Top Words/Emojis", minimum=5, maximum=100, step=5, value=20, interactive=True, scale=2)
         show_counts_input = gr.Checkbox(label="Show Counts", value=True, interactive=True, scale=1)
         
     with gr.Accordion("🎨 Appearance Settings", open=False):
