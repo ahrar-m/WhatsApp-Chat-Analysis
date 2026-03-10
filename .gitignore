@@ -1,0 +1,4 @@
+# Ignore raw WhatsApp chats and parsed data
+*.txt
+*.csv
+*.zip

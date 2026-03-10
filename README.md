@@ -105,8 +105,38 @@ python dashboard.py
 - Example screenshots
 - Installation instructions for Android (via Termux)
 - Graph Resolution control
+- PDF Export of Chat Analytics
+- Spider Graphs
+- Integrated Chat Parser
+- Zip file chat export input
+
+## Future Scope (AI)
+
+**Time & Interaction Dynamics**
+* **Response Time Analysis:** Calculates the average time it takes for participants to reply to each other.
+* **Conversation Starters:** Identifies who initiates the chat most frequently after long periods of silence.
+* **Activity Streaks:** Tracks the longest consecutive days of messaging and visualizes long-term volume trends.
+
+**Language & Context**
+* **Common Phrases (N-grams):** Goes beyond single words to extract the most frequently used 2-to-3 word combinations.
+* **Shared Link Extraction:** Aggregates all shared URLs, websites, and YouTube videos into a single, searchable table.
+* **Vocabulary Richness:** Measures lexical diversity to see who uses the widest variety of unique words.
+* **Sentiment Analysis:** Maps the emotional tone (positive, negative, or neutral) of the conversation over time.
+
+**Engagement & Media**
+* **Media Breakdown:** Categorizes and counts shared photos, videos, voice notes, and stickers.
+* **Verbosity Tracking:** Compares the average words-per-message to identify paragraph texters versus one-word repliers.
+* **Deleted Message Counter:** Tracks who uses the "This message was deleted" feature the most.
+
+**Group Chat Dynamics**
+* **Interaction Network:** Maps who replies to or quotes whom the most within a group setting.
+* **Mention Tracking:** Counts who gets `@tagged` the most frequently.
+* **Ghost Detection:** Identifies the quietest participants based on message-to-time-in-group ratio.
+
 
 ## Special Thanks to
 
 - **Google Gemini** for enabling me to build the scripts with minimum effort.
-- **Ex Girlfriend** for motivating me to analyze amazing/toxic trends in our chat.
+- **Ex Girlfriend** for motivating me to analyze amazing/toxic trends in our chat.  
+
+This is my first project, created to understand GitHub terminology and workflows. 
