@@ -104,11 +104,11 @@ python dashboard.py
 - Standalone **.exe** or **.html** file
 - Example screenshots
 - Installation instructions for Android (via Termux)
-- Graph Resolution control
+- ~~Graph Resolution control~~
 - PDF Export of Chat Analytics
 - Spider Graphs
-- Integrated Chat Parser
-- Zip file chat export input
+- ~~Integrated Chat Parser~~
+- ~~Zip file chat export input~~
 
 ## Future Scope (AI)
 
