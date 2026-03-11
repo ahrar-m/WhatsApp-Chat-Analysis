@@ -21,17 +21,14 @@ CFG_RESOLUTION_MULTIPLIER = 1.0 # Increase for higher quality image downloads
 BASE_HOURS = ['12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM']
 
 # ==========================================
-# PHASE 1: CLI EXTRACTION & PARSING
+# PHASE 1: DATA PARSING & EXTRACTION
 # ==========================================
 
-def parse_whatsapp_chat(file_path):
-    """Parses raw text into a structured DataFrame."""
+def parse_chat_lines(lines):
+    """Core regex parser that converts raw text lines into a Pandas DataFrame."""
     pattern = r'^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{1,2}:\d{2}\s?(?:[aApP][mM])?)\s-\s(.*?):\s(.*)$'
     parsed_data = [] 
     
-    with open(file_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
-        
     date, time, sender, message = None, None, None, ""
     
     for line in lines:
@@ -53,57 +50,42 @@ def parse_whatsapp_chat(file_path):
     
     return df
 
-def run_cli_setup():
-    """Handles zip detection, extraction, and automated parsing before UI launches."""
-    print("\n" + "="*50)
-    print("🚀 WhatsApp Analyzer Pre-Flight Check")
-    print("="*50)
-    
-    zip_files = [f for f in os.listdir('.') if f.endswith('.zip')]
-    if zip_files:
-        target_zip = zip_files[0]
-        extract = True
+def load_chat_data(file_path):
+    """Smart loader that handles .zip, .txt, or pre-parsed .csv files dynamically."""
+    if not file_path:
+        return pd.DataFrame()
         
-        if os.path.exists('chat.txt'):
-            ans = input(f"⚠️ 'chat.txt' already exists. Overwrite by extracting '{target_zip}'? (y/n): ").strip().lower()
-            if ans not in ['y', 'yes']:
-                extract = False
-        else:
-            ans = input(f"📦 Found '{target_zip}'. Extract chat file now? (y/n): ").strip().lower()
-            if ans not in ['y', 'yes']:
-                extract = False
-                
-        if extract:
-            try:
-                with zipfile.ZipFile(target_zip, 'r') as z:
-                    txt_files = [f for f in z.namelist() if f.endswith('.txt')]
-                    if txt_files:
-                        with z.open(txt_files[0]) as source_file:
-                            with open('chat.txt', 'wb') as output_file:
-                                output_file.write(source_file.read())
-                        print("✅ Successfully extracted 'chat.txt'.")
-                    else:
-                        print(f"❌ No .txt files found inside '{target_zip}'.")
-            except Exception as e:
-                print(f"❌ Error extracting zip: {e}")
-
-    if os.path.exists('chat.txt'):
-        print("\n⏳ Auto-parsing 'chat.txt' into CSV format...")
+    # If the user uploads a ZIP, extract and parse it in memory
+    if file_path.endswith('.zip'):
         try:
-            df = parse_whatsapp_chat('chat.txt')
-            csv_name = 'parsed_chat.csv'
-            df.to_csv(csv_name, index=False, encoding='utf-8')
-            print(f"✅ Created '{csv_name}' ({len(df)} messages ready).")
-            return csv_name
-        except Exception as e:
-            print(f"❌ Error during parsing: {e}")
+            with zipfile.ZipFile(file_path, 'r') as z:
+                txt_files = [f for f in z.namelist() if f.endswith('.txt')]
+                if not txt_files:
+                    return pd.DataFrame()
+                
+                with z.open(txt_files[0]) as f:
+                    # Decode binary data to utf-8 strings
+                    lines = [line.decode('utf-8') for line in f.readlines()]
+                    return parse_chat_lines(lines)
+        except Exception:
+            return pd.DataFrame()
             
-    elif os.path.exists('parsed_chat.csv'):
-        print("✅ Found existing 'parsed_chat.csv'. Bypassing extraction.")
-        return 'parsed_chat.csv'
-        
-    print("⚠️ No valid chat data found. Please upload manually in the dashboard.")
-    return None
+    # If the user uploads a raw .txt file directly
+    elif file_path.endswith('.txt'):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return parse_chat_lines(f.readlines())
+        except Exception:
+            return pd.DataFrame()
+            
+    # If the user uploads a previously generated .csv
+    elif file_path.endswith('.csv'):
+        try:
+            return pd.read_csv(file_path)
+        except Exception:
+            return pd.DataFrame()
+            
+    return pd.DataFrame()
 
 # ==========================================
 # PHASE 2: DATA ANALYSIS FUNCTIONS
@@ -118,23 +100,29 @@ def get_file_path(file_obj):
     return file_obj.name if hasattr(file_obj, 'name') else file_obj
 
 def handle_file_upload(file_input):
+    """Triggered instantly when a file is uploaded to populate the UI dropdowns."""
     path = get_file_path(file_input)
     if not path:
         return gr.update(choices=["All Participants"], value="All Participants"), None, None
-    try:
-        df = pd.read_csv(path)
-        df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
-        users = ["All Participants"] + sorted(df['Sender'].dropna().unique().tolist())
-        return gr.update(choices=users, value="All Participants"), df['Datetime'].min(), df['Datetime'].max()
-    except Exception:
+    
+    df = load_chat_data(path)
+    if df.empty:
         return gr.update(choices=["All Participants"], value="All Participants"), None, None
+        
+    df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
+    users = ["All Participants"] + sorted(df['Sender'].dropna().unique().tolist())
+    return gr.update(choices=users, value="All Participants"), df['Datetime'].min(), df['Datetime'].max()
 
 def analyze_chat(file_input, search_query, match_type, selected_user, start_hour, top_n, show_counts, start_date, end_date, custom_stop_words, font_size, chart_height, res_scale):
+    """Main analysis engine triggered by the 'Generate Analytics' button."""
     path = get_file_path(file_input)
     if not path:
         return pd.DataFrame(), None, None, None, None, None
     
-    df = pd.read_csv(path)
+    df = load_chat_data(path)
+    if df.empty:
+         return pd.DataFrame(["Error: Could not parse file."]), None, None, None, None, None
+         
     df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
     df = df.dropna(subset=['Message']) 
     
@@ -168,7 +156,6 @@ def analyze_chat(file_input, search_query, match_type, selected_user, start_hour
     days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     shifted_hours = get_shifted_hours(start_hour)
 
-    # Apply resolution scaling to layout parameters
     scaled_height = int(chart_height * res_scale)
     scaled_font = int(font_size * res_scale)
 
@@ -207,7 +194,6 @@ def analyze_chat(file_input, search_query, match_type, selected_user, start_hour
     fig_words = px.bar(word_counts, x='Count', y='Word', orientation='h', title=f"Top {top_n} Words ({selected_user})", color='Count', color_continuous_scale="Viridis", text='Count' if show_counts else None)
     if show_counts: fig_words.update_traces(textposition='outside')
     
-    # Scale dynamic height for long horizontal bar charts
     dynamic_height = max(scaled_height, top_n * (scaled_font * 1.5))
     fig_words.update_layout(font_size=scaled_font, font_family=common_layout["font_family"], height=dynamic_height, autosize=True, margin=dict(l=20, r=20, t=50, b=20))
     
@@ -223,13 +209,13 @@ def analyze_chat(file_input, search_query, match_type, selected_user, start_hour
 # PHASE 3: GRADIO UI LAYOUT
 # ==========================================
 if __name__ == "__main__":
-    default_file = run_cli_setup()
     
     with gr.Blocks() as app:
         gr.Markdown("# 📊 WhatsApp Chat Analyzer")
         
         with gr.Row():
-            file_input = gr.File(label="1. Upload parsed CSV file", file_types=[".csv"], scale=2, value=default_file)
+            # UPDATED: File input now explicitly asks for .zip (or .txt/.csv)
+            file_input = gr.File(label="1. Upload WhatsApp Export (.zip, .txt, or .csv)", file_types=[".zip", ".txt", ".csv"], scale=2)
             user_dropdown = gr.Dropdown(label="2. Filter by Participant", choices=["All Participants"], value="All Participants", interactive=True, scale=2)
             
             with gr.Column(scale=2):
@@ -262,7 +248,6 @@ if __name__ == "__main__":
                 hourly_sum_output = gr.Plot()
                 heatmap_output = gr.Plot()
             with gr.TabItem("Top Words & Emojis"):
-                # Removed the row block so these naturally take up the full screen width and stack vertically
                 words_output = gr.Plot()
                 emojis_output = gr.Plot()
             with gr.TabItem("Explore Chat"):
@@ -270,12 +255,8 @@ if __name__ == "__main__":
 
         file_input.change(fn=handle_file_upload, inputs=[file_input], outputs=[user_dropdown, start_date_input, end_date_input])
         
-        if default_file:
-            app.load(fn=handle_file_upload, inputs=[file_input], outputs=[user_dropdown, start_date_input, end_date_input])
-
         analyze_btn.click(
             fn=analyze_chat,
-            # Make sure resolution_input is passed correctly here
             inputs=[file_input, search_input, match_type_input, user_dropdown, start_hour_input, top_n_input, show_counts_input, start_date_input, end_date_input, custom_stop_words_input, font_size_input, chart_height_input, resolution_input],
             outputs=[chat_df_output, timeline_output, hourly_sum_output, heatmap_output, words_output, emojis_output]
         )

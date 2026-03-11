@@ -109,6 +109,7 @@ python dashboard.py
 - Spider Graphs
 - ~~Integrated Chat Parser~~
 - ~~Zip file chat export input~~
+- Graph based message explorer
 
 ## Future Scope (AI)
 
