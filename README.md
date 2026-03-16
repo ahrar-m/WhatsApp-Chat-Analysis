@@ -111,6 +111,9 @@ python dashboard.py
 - Graph based message explorer
 - Chat sentiment analysis (word based, from user input)
 - Word grouping graphs
+- Add functionality to import multiple WhatsApp zips
+- Update Readme for "main" release
+- Add functionality for Instagram and Snapchat takeout message exports with guide/links
 
 ## Future Scope (AI)
 
