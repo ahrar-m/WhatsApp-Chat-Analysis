@@ -1,8 +1,0 @@
-# Ignore raw WhatsApp chats and parsed data
-*.txt
-*.csv
-*.zip
-venv/
-
-# Exception: Do NOT ignore requirements.txt
-!requirements.txt
