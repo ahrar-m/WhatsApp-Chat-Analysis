@@ -89,24 +89,30 @@
 
         <section id="dashboard" class="hidden space-y-8">
             <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border mb-8">
-                <h3 class="text-lg font-semibold mb-4">Filters</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h3 class="text-lg font-semibold mb-6 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                    </svg>
+                    Analysis Filters
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Participants:</label>
-                        <div id="participant-filter" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm p-3 h-32 overflow-y-auto">
+                        <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Participants</label>
+                        <div id="participant-filter" class="w-full h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 space-y-1">
                         </div>
                     </div>
                     <div>
-                        <label for="time-range-start" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date:</label>
-                        <input type="date" id="time-range-start" class="mt-1 block w-full rounded-md border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
-
-                        <label for="time-range-end" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">End Date:</label>
-                        <input type="date" id="time-range-end" class="mt-1 block w-full rounded-md border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
+                        <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Date Range</label>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <input type="date" id="time-range-start" class="w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm p-2.5 focus:border-green-500 focus:ring-1 focus:ring-green-500">
+                            <span class="text-gray-400">to</span>
+                            <input type="date" id="time-range-end" class="w-full rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm p-2.5 focus:border-green-500 focus:ring-1 focus:ring-green-500">
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <button id="apply-filters-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg transition shadow-sm">Apply Changes</button>
+                            <button id="clear-filters-btn" class="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium px-4 py-2.5 rounded-lg transition">Clear All Filters</button>
+                        </div>
                     </div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button id="apply-filters-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">Apply Filters</button>
-                    <button id="clear-filters-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition">Clear Filters</button>
                 </div>
             </div>
 
@@ -158,6 +164,24 @@
                     </div>
                 </div>
             </div>
+            <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold">Common Phrases (N-grams)</h3>
+                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-sm">Words:</label>
+                        <select id="ngram-n" class="border rounded p-1 dark:bg-gray-700">
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+                </div>
+                <div id="ngram-container" class="space-y-2"></div>
+            </div>
+            
             <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
                 <h3 class="text-lg font-semibold mb-6">Activity Heatmap (Hour vs. Day)</h3>
                 <div class="overflow-x-auto">
@@ -223,22 +247,55 @@
             document.getElementById('error-message').innerHTML = '';
         }
 
+        let skippedPhrases = new Set();
+        function getCommonPhrases(messages, n = 2, top = 10) {
+            const phraseCounts = {};
+
+            messages.forEach(msg => {
+                const words = msg.content.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 0);
+                if (words.length < n) return;
+                for (let i = 0; i <= words.length - n; i++) {
+                    const phrase = words.slice(i, i + n).join(' ');
+                    if (skippedPhrases.has(phrase)) continue;
+                    phraseCounts[phrase] = (phraseCounts[phrase] || 0) + 1;
+                }
+            });
+
+            return Object.entries(phraseCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, top);
+        }
+
         function processData(messages) {
             chatData = messages;
             participants = {};
-            console.log('Processing messages:', messages.length);
+            const media = { photo: 0, video: 0, sticker: 0, voicenote: 0 };
             
             const timelineData = {};
             const hourlyData = Array(24).fill(0);
             const weeklyData = Array(7).fill(0);
             const heatmapData = Array(7).fill(0).map(() => Array(24).fill(0)); 
+            const interactions = {};
 
             messages.forEach(msg => {
-                if (!participants[msg.author]) {
-                    participants[msg.author] = { count: 0, words: 0 };
-                }
+                if (!participants[msg.author]) participants[msg.author] = { count: 0, words: 0 };
                 participants[msg.author].count++;
                 participants[msg.author].words += msg.wordCount;
+
+                if (msg.content.includes('<Media omitted>')) media.photo++;
+                else if (msg.content.includes('.jpg') || msg.content.includes('.png')) media.photo++;
+                else if (msg.content.includes('.mp4')) media.video++;
+                else if (msg.content.includes('sticker')) media.sticker++;
+                else if (msg.content.includes('voice note')) media.voicenote++;
+
+                if (msg.content.includes('@')) {
+                    const mentioned = msg.content.match(/@(\w+)/);
+                    if (mentioned) {
+                        const target = mentioned[1];
+                        interactions[msg.author] = interactions[msg.author] || {};
+                        interactions[msg.author][target] = (interactions[msg.author][target] || 0) + 1;
+                    }
+                }
 
                 if (msg.date) {
                     const dayKey = msg.date.format('YYYY-MM-DD');
@@ -249,17 +306,33 @@
                 }
             });
 
-            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData);
+            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData, media, interactions);
         }
 
         function processFilteredData(messages) {
             const filteredParticipants = {};
+            const media = { photo: 0, video: 0, sticker: 0, voicenote: 0 };
+            const interactions = {};
+            
             messages.forEach(msg => {
-                if (!filteredParticipants[msg.author]) {
-                    filteredParticipants[msg.author] = { count: 0, words: 0 };
-                }
+                if (!filteredParticipants[msg.author]) filteredParticipants[msg.author] = { count: 0, words: 0 };
                 filteredParticipants[msg.author].count++;
                 filteredParticipants[msg.author].words += msg.wordCount;
+
+                if (msg.content.includes('<Media omitted>')) media.photo++;
+                else if (msg.content.includes('.jpg') || msg.content.includes('.png')) media.photo++;
+                else if (msg.content.includes('.mp4')) media.video++;
+                else if (msg.content.includes('sticker')) media.sticker++;
+                else if (msg.content.includes('voice note')) media.voicenote++;
+
+                if (msg.content.includes('@')) {
+                    const mentioned = msg.content.match(/@(\w+)/);
+                    if (mentioned) {
+                        const target = mentioned[1];
+                        interactions[msg.author] = interactions[msg.author] || {};
+                        interactions[msg.author][target] = (interactions[msg.author][target] || 0) + 1;
+                    }
+                }
             });
             participants = filteredParticipants;
 
@@ -278,7 +351,7 @@
                 }
             });
 
-            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData);
+            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData, media, interactions);
         }
 
         function updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData) {
@@ -314,6 +387,23 @@
                     `;
                     tableBody.appendChild(row);
                 });
+
+            const updateNgrams = () => {
+                const n = parseInt(document.getElementById('ngram-n').value);
+                const ngramContainer = document.getElementById('ngram-container');
+                ngramContainer.innerHTML = getCommonPhrases(messages, n).map(([phrase, count]) => `
+                    <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                        <span>${phrase} <span class="font-bold text-green-600 ml-2">(${count})</span></span>
+                        <button class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded" onclick="skipPhrase('${phrase.replace(/'/g, "\\'")}')">Skip</button>
+                    </div>
+                `).join('');
+            };
+            window.skipPhrase = (phrase) => {
+                skippedPhrases.add(phrase);
+                updateNgrams();
+            };
+            document.getElementById('ngram-n').addEventListener('change', updateNgrams);
+            updateNgrams();
 
             renderCharts(timelineData, hourlyData, weeklyData, heatmapData);
         }
