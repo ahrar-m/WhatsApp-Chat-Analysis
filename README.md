@@ -10,9 +10,10 @@ A local, private web application to analyze WhatsApp chat exports. All processin
     - **Participant Activity**: Compare message volume per user.
     - **Hourly & Weekly Activity**: Understand when users are most active during the day and week.
     - **Activity Heatmap**: A comprehensive grid showing message intensity by hour and day.
+- **N-grams Analysis**: Identify common phrases with user-driven skipping functionality.
 - **Filtering**:
     - **Participant Filter**: Use checkboxes to include or exclude specific participants from the analysis.
-    - **Time Range**: Set start and end dates to focus the analysis on specific periods.
+    - **Time Range**: Set start and end dates with an aesthetic date-picker interface.
 
 ## How to use
 
