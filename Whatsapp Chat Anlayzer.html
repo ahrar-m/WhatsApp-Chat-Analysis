@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Chat Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            text: '#f1f5f9'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        #drop-area {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .dark #drop-area {
+            border-color: '#334155';
+        }
+        #drop-area.active {
+            border-color: '#22c55e';
+            background-color: rgba(34, 197, 94, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-dark-bg min-h-screen font-sans text-gray-900 dark:text-dark-text transition-colors duration-300">
+    <nav class="bg-green-600 dark:bg-green-700 text-white shadow-lg p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">WhatsApp Chat Analyzer</h1>
+            <div class="flex items-center space-x-4">
+                <button id="theme-toggle" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition" title="Toggle Theme">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+                <button id="reset-btn" class="hidden bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition">Analyze New Chat</button>
+                <div class="text-sm opacity-80 hidden sm:block">Private & Local Analysis</div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <section id="upload-section" class="mb-12">
+            <div id="drop-area" class="bg-white dark:bg-dark-card rounded-xl shadow-sm p-12 text-center cursor-pointer border border-gray-100 dark:border-dark-border">
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-green-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <h2 class="text-xl font-semibold mb-2">Drop your WhatsApp Export ZIP here</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Or click to select a file from your computer</p>
+                    <input type="file" id="file-input" class="hidden" accept=".zip,.txt">
+                    <button class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition">Select File</button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">Your data never leaves your computer. All analysis happens locally in your browser.</p>
+            <div id="error-display" class="hidden mt-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span id="error-message" class="block sm:inline">Something went wrong.</span>
+            </div>
+        </section>
+
+        <div id="loading-overlay" class="hidden fixed inset-0 bg-white/80 dark:bg-dark-bg/80 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                <p class="text-lg font-medium text-gray-700 dark:text-gray-300">Analyzing your chat...</p>
+            </div>
+        </div>
+
+        <section id="dashboard" class="hidden space-y-8">
+            <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border mb-8">
+                <h3 class="text-lg font-semibold mb-4">Filters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Participants:</label>
+                        <div id="participant-filter" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm p-3 h-32 overflow-y-auto">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="time-range-start" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date:</label>
+                        <input type="date" id="time-range-start" class="mt-1 block w-full rounded-md border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
+
+                        <label for="time-range-end" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">End Date:</label>
+                        <input type="date" id="time-range-end" class="mt-1 block w-full rounded-md border-gray-300 dark:border-dark-border dark:bg-gray-700 dark:text-dark-text shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="apply-filters-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">Apply Filters</button>
+                    <button id="clear-filters-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition">Clear Filters</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Total Messages</p>
+                    <p id="stat-total-messages" class="text-3xl font-bold text-green-600 dark:text-green-500">-</p>
+                </div>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Participants</p>
+                    <p id="stat-total-participants" class="text-3xl font-bold text-blue-600 dark:text-blue-400">-</p>
+                </div>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Average Messages/Day</p>
+                    <p id="stat-avg-messages" class="text-3xl font-bold text-purple-600 dark:text-purple-400">-</p>
+                </div>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Time Period</p>
+                    <p id="stat-period" class="text-lg font-bold text-orange-600 dark:text-orange-400">-</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <h3 class="text-lg font-semibold mb-6">Message Volume Over Time</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-timeline"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <h3 class="text-lg font-semibold mb-6">Most Active Participants</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-participants"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <h3 class="text-lg font-semibold mb-6">Hourly Activity (24h)</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-hourly"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <h3 class="text-lg font-semibold mb-6">Day of the Week Activity</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-weekly"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                <h3 class="text-lg font-semibold mb-6">Activity Heatmap (Hour vs. Day)</h3>
+                <div class="overflow-x-auto">
+                    <div id="heatmap-container" class="w-full flex justify-center py-4">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
+                <div class="p-6 border-b border-gray-100 dark:border-dark-border">
+                    <h3 class="text-lg font-semibold">Detailed Participant Breakdown</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-sm uppercase">
+                            <tr>
+                                <th class="px-6 py-3 font-semibold">Name</th>
+                                <th class="px-6 py-3 font-semibold">Messages</th>
+                                <th class="px-6 py-3 font-semibold">% of Total</th>
+                                <th class="px-6 py-3 font-semibold">Avg Words/Msg</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participant-table-body" class="divide-y divide-gray-100 dark:divide-dark-border">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global State
+        let chatData = [];
+        let participants = {};
+        let charts = {};
+        let isDarkMode = true;
+        
+        // Cache DOM elements
+        const uploadSection = document.getElementById('upload-section');
+        const dashboard = document.getElementById('dashboard');
+        const resetBtn = document.getElementById('reset-btn');
+        const fileInput = document.getElementById('file-input');
+        const dropArea = document.getElementById('drop-area');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const participantFilter = document.getElementById('participant-filter');
+        const timeRangeStart = document.getElementById('time-range-start');
+        const timeRangeEnd = document.getElementById('time-range-end');
+        const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const heatmapContainer = document.getElementById('heatmap-container');
+
+        // Helper functions
+        function showError(message) {
+            document.getElementById('error-message').innerHTML = message;
+            document.getElementById('error-display').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error-display').classList.add('hidden');
+            document.getElementById('error-message').innerHTML = '';
+        }
+
+        function processData(messages) {
+            chatData = messages;
+            participants = {};
+            console.log('Processing messages:', messages.length);
+            
+            const timelineData = {};
+            const hourlyData = Array(24).fill(0);
+            const weeklyData = Array(7).fill(0);
+            const heatmapData = Array(7).fill(0).map(() => Array(24).fill(0)); 
+
+            messages.forEach(msg => {
+                if (!participants[msg.author]) {
+                    participants[msg.author] = { count: 0, words: 0 };
+                }
+                participants[msg.author].count++;
+                participants[msg.author].words += msg.wordCount;
+
+                if (msg.date) {
+                    const dayKey = msg.date.format('YYYY-MM-DD');
+                    timelineData[dayKey] = (timelineData[dayKey] || 0) + 1;
+                    hourlyData[msg.date.hour()]++;
+                    weeklyData[msg.date.day()]++;
+                    heatmapData[msg.date.day()][msg.date.hour()]++;
+                }
+            });
+
+            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData);
+        }
+
+        function processFilteredData(messages) {
+            const filteredParticipants = {};
+            messages.forEach(msg => {
+                if (!filteredParticipants[msg.author]) {
+                    filteredParticipants[msg.author] = { count: 0, words: 0 };
+                }
+                filteredParticipants[msg.author].count++;
+                filteredParticipants[msg.author].words += msg.wordCount;
+            });
+            participants = filteredParticipants;
+
+            const timelineData = {};
+            const hourlyData = Array(24).fill(0);
+            const weeklyData = Array(7).fill(0);
+            const heatmapData = Array(7).fill(0).map(() => Array(24).fill(0)); 
+
+            messages.forEach(msg => {
+                if (msg.date) {
+                    const dayKey = msg.date.format('YYYY-MM-DD');
+                    timelineData[dayKey] = (timelineData[dayKey] || 0) + 1;
+                    hourlyData[msg.date.hour()]++;
+                    weeklyData[msg.date.day()]++;
+                    heatmapData[msg.date.day()][msg.date.hour()]++;
+                }
+            });
+
+            updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData);
+        }
+
+        function updateDashboard(messages, timelineData, hourlyData, weeklyData, heatmapData) {
+            uploadSection.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+            resetBtn.classList.remove('hidden');
+
+            document.getElementById('stat-total-messages').textContent = messages.length.toLocaleString();
+            const participantNames = Object.keys(participants);
+            document.getElementById('stat-total-participants').textContent = participantNames.length;
+            
+            const firstDate = messages.find(m => m.date)?.date;
+            const lastDate = [...messages].reverse().find(m => m.date)?.date;
+            
+            if (firstDate && lastDate) {
+                const days = Math.max(1, lastDate.diff(firstDate, 'days'));
+                document.getElementById('stat-avg-messages').textContent = Math.round(messages.length / days);
+                document.getElementById('stat-period').textContent = `${firstDate.format('MMM YYYY')} - ${lastDate.format('MMM YYYY')}`;
+            }
+
+            const tableBody = document.getElementById('participant-table-body');
+            tableBody.innerHTML = '';
+            participantNames
+                .sort((a, b) => participants[b].count - participants[a].count)
+                .forEach(name => {
+                    const stats = participants[name];
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 font-medium">${name}</td>
+                        <td class="px-6 py-4">${stats.count.toLocaleString()}</td>
+                        <td class="px-6 py-4">${((stats.count / messages.length) * 100).toFixed(1)}%</td>
+                        <td class="px-6 py-4">${(stats.words / stats.count).toFixed(1)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+            renderCharts(timelineData, hourlyData, weeklyData, heatmapData);
+        }
+
+        function renderCharts(timelineData, hourlyData, weeklyData, heatmapData) {
+            Object.values(charts).forEach(chart => chart.destroy());
+            heatmapContainer.innerHTML = ''; 
+
+            const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+            const gridColor = isDarkMode ? '#334155' : '#f1f5f9';
+
+            Chart.defaults.color = textColor;
+            Chart.defaults.borderColor = gridColor;
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: textColor } }
+                },
+                scales: {
+                    y: { grid: { color: gridColor }, ticks: { color: textColor } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                }
+            };
+
+            const timelineSortedKeys = Object.keys(timelineData).sort();
+            charts.timeline = new Chart(document.getElementById('chart-timeline'), {
+                type: 'line',
+                data: {
+                    labels: timelineSortedKeys.map(date => moment(date).format('MMM DD, YY')),
+                    datasets: [{
+                        label: 'Messages',
+                        data: timelineSortedKeys.map(k => timelineData[k]),
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { labels: { color: textColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Messages: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { grid: { color: gridColor }, ticks: { color: textColor } },
+                        x: { 
+                            type: 'time',
+                            time: { unit: 'day' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+
+            const topParticipants = Object.keys(participants)
+                .sort((a, b) => participants[b].count - participants[a].count)
+                .slice(0, 10);
+
+            charts.participants = new Chart(document.getElementById('chart-participants'), {
+                type: 'bar',
+                data: {
+                    labels: topParticipants,
+                    datasets: [{ label: 'Messages', data: topParticipants.map(p => participants[p].count), backgroundColor: '#3b82f6' }]
+                },
+                options: { ...commonOptions, indexAxis: 'y' }
+            });
+
+            charts.hourly = new Chart(document.getElementById('chart-hourly'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [{ label: 'Messages', data: hourlyData, backgroundColor: '#a855f7' }]
+                },
+                options: commonOptions
+            });
+
+            const weekDaysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const hoursOfDay = Array.from({length: 24}, (_, i) => `${i}:00`);
+
+            const maxMessages = Math.max(...heatmapData.flat());
+
+            const heatmapTable = document.createElement('table');
+            heatmapTable.className = 'table-auto border-collapse border border-gray-200 dark:border-gray-700 mx-auto';
+
+            let headerHtml = '<thead><tr><th class="p-1 text-xs text-gray-500 dark:text-gray-400"></th>';
+            hoursOfDay.forEach(hour => {
+                headerHtml += `<th class="p-1 text-xs text-gray-500 dark:text-gray-400 rotate-45">${hour}</th>`;
+            });
+            headerHtml += '</tr></thead>';
+            heatmapTable.innerHTML += headerHtml;
+
+            let bodyHtml = '<tbody>';
+            const reorderedDays = [1, 2, 3, 4, 5, 6, 0]; 
+
+            reorderedDays.forEach(dayIndex => {
+                bodyHtml += `<tr><td class="p-1 text-xs font-semibold text-gray-600 dark:text-gray-300">${weekDaysFull[dayIndex].substring(0, 3)}</td>`;
+                heatmapData[dayIndex].forEach(count => {
+                    const intensity = maxMessages > 0 ? (count / maxMessages) : 0;
+                    const bgColor = `rgba(34, 197, 94, ${intensity + 0.1})`; 
+                    const textColor = intensity > 0.5 ? '#fff' : (isDarkMode ? '#f1f5f9' : '#1f2937');
+                    bodyHtml += `<td class="p-1 w-8 h-8 text-center text-xs font-medium rounded-sm" style="background-color: ${bgColor}; color: ${textColor};">${count > 0 ? count : ''}</td>`;
+                });
+                bodyHtml += '</tr>';
+            });
+            bodyHtml += '</tbody>';
+            heatmapTable.innerHTML += bodyHtml;
+
+            heatmapContainer.appendChild(heatmapTable);
+
+            charts.weekly = new Chart(document.getElementById('chart-weekly'), {
+                type: 'bar',
+                data: {
+                    labels: weekDaysFull,
+                    datasets: [{ label: 'Messages', data: weeklyData, backgroundColor: '#f97316' }]
+                },
+                options: commonOptions
+            });
+        }
+
+        function populateFilterOptions() {
+            participantFilter.innerHTML = '';
+            const allParticipants = Object.keys(participants).sort();
+            allParticipants.forEach(p => {
+                const wrapper = document.createElement('label');
+                wrapper.className = 'flex items-center space-x-2 py-1 cursor-pointer';
+                wrapper.innerHTML = `
+                    <input type="checkbox" value="${p}" checked class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">${p}</span>
+                `;
+                participantFilter.appendChild(wrapper);
+            });
+
+            // Find all messages with dates to determine overall range
+            const messagesWithDates = chatData.filter(m => m.date);
+            if (messagesWithDates.length > 0) {
+                const sortedDates = messagesWithDates.map(m => m.date).sort((a, b) => a - b);
+                const firstDate = sortedDates[0].format('YYYY-MM-DD');
+                const lastDate = sortedDates[sortedDates.length - 1].format('YYYY-MM-DD');
+                timeRangeStart.value = firstDate;
+                timeRangeEnd.value = lastDate;
+            }
+        }
+
+        function applyFilters() {
+            const selectedParticipants = Array.from(participantFilter.querySelectorAll('input:checked')).map(input => input.value);
+            const startDate = timeRangeStart.value ? moment(timeRangeStart.value) : null;
+            const endDate = timeRangeEnd.value ? moment(timeRangeEnd.value).endOf('day') : null;
+
+            const filteredMessages = chatData.filter(msg => {
+                const matchesParticipant = selectedParticipants.length === 0 || selectedParticipants.includes(msg.author);
+                const matchesDate = (!startDate || (msg.date && msg.date.isSameOrAfter(startDate, 'day'))) &&
+                                    (!endDate || (msg.date && msg.date.isSameOrBefore(endDate, 'day')));
+                return matchesParticipant && matchesDate;
+            });
+
+            processFilteredData(filteredMessages);
+        }
+
+        async function handleFile(file) {
+            hideError();
+            loadingOverlay.classList.remove('hidden');
+            try {
+                let text = '';
+                if (file.name.endsWith('.zip')) {
+                    const zip = await JSZip.loadAsync(file);
+                    const txtFile = Object.values(zip.files).find(f => f.name.endsWith('.txt') && !f.name.startsWith('__MACOSX'));
+                    if (!txtFile) throw new Error('No .txt file found in ZIP');
+                    text = await txtFile.async('string');
+                } else if (file.name.endsWith('.txt')) {
+                    text = await file.text();
+                } else {
+                    throw new Error('Please upload a .zip or .txt file');
+                }
+
+                analyzeChat(text);
+            } catch (err) {
+                showError('Error processing file: ' + err.message + '<br>Check console for details.');
+                console.error(err);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        function analyzeChat(text) {
+            const lines = text.split(/\r?\n/);
+            const parsedMessages = [];
+            
+            const patterns = [
+                // Matches format like: [DD/MM/YYYY, HH:mm:ss] Author: Message
+                /^\[?(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APM]{2})?)\]?\s-\s([^:]+):\s(.*)$/i,
+                // Matches format like: DD/MM/YYYY, HH:mm - Author: Message
+                /^(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APM]{2})?)\s-\s([^:]+):\s(.*)$/i,
+                // Matches format like: DD/MM/YYYY, HH:mm: Author: Message
+                /^(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APM]{2})?):\s([^:]+):\s(.*)$/i
+            ];
+
+            let currentMessage = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                let match = null;
+                for (const pattern of patterns) {
+                    match = line.match(pattern);
+                    if (match) break;
+                }
+
+                if (match) {
+                    if (currentMessage) parsedMessages.push(currentMessage);
+                    
+                    const [_, dateStr, timeStr, author, message] = match;
+
+                    console.log('Match found:', author, message);
+                    const systemIndicators = ['added', 'removed', 'changed', 'created', 'joined', 'left', 'security code', 'messages are end-to-end encrypted'];
+                    if (systemIndicators.some(indicator => author.toLowerCase().includes(indicator))) {
+                        currentMessage = null;
+                        return;
+                    }
+                    
+                    let date = moment(`${dateStr} ${timeStr}`, [
+                        'DD/MM/YY HH:mm:ss', 'DD/MM/YYYY HH:mm:ss',
+                        'MM/DD/YY HH:mm:ss', 'MM/DD/YYYY HH:mm:ss',
+                        'DD/MM/YY, HH:mm', 'MM/DD/YY, HH:mm',
+                        'DD/MM/YYYY, h:mm a', 'DD/MM/YY, h:mm a',
+                        'M/D/YY, h:mm A', 'D/M/YY, h:mm A',
+                        'YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'
+                    ]);
+
+                    currentMessage = {
+                        date: date.isValid() ? date : null,
+                        author: author.trim(),
+                        content: message,
+                        wordCount: message.split(/\s+/).length
+                    };
+                } else if (currentMessage) {
+                    currentMessage.content += '\n' + line;
+                    currentMessage.wordCount += line.split(/\s+/).length;
+                } else {
+                    console.log('Line did not match any pattern:', line);
+                }
+            });
+
+            if (currentMessage) parsedMessages.push(currentMessage);
+
+            if (parsedMessages.length === 0) {
+                showError('Could not parse any messages. Please ensure the format is a standard WhatsApp export. Patterns tried: ' + patterns.map(p => p.toString()).join(', '));
+                return;
+            }
+
+            console.log('Parsed messages:', parsedMessages.length);
+            processData(parsedMessages);
+            populateFilterOptions();
+        }
+        
+        dropArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
+        });
+        dropArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            handleFile(file);
+        });
+        resetBtn.addEventListener('click', () => {
+            dashboard.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+            resetBtn.classList.add('hidden');
+            fileInput.value = '';
+            chatData = [];
+            participantFilter.innerHTML = '';
+            timeRangeStart.value = '';
+            timeRangeEnd.value = '';
+            hideError(); 
+        });
+        applyFiltersBtn.addEventListener('click', () => applyFilters());
+        clearFiltersBtn.addEventListener('click', () => {
+            Array.from(participantFilter.querySelectorAll('input')).forEach(input => input.checked = true);
+            timeRangeStart.value = '';
+            timeRangeEnd.value = '';
+            applyFilters();
+        });
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            updateTheme();
+        });
+        function updateTheme() {
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                darkIcon.classList.add('hidden');
+                lightIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+            }
+            if (Object.keys(charts).length > 0) processData(chatData);
+        }
+        updateTheme();
+    </script>
+</body>
+</html>
