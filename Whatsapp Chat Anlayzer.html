@@ -29,7 +29,7 @@
     <style>
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 250px;
             width: 100%;
         }
         #drop-area {
@@ -42,6 +42,12 @@
         #drop-area.active {
             border-color: '#22c55e';
             background-color: rgba(34, 197, 94, 0.05);
+        }
+        /* Mobile optimization for heatmap */
+        #heatmap-container {
+            overflow-x: auto;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
@@ -422,7 +428,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor } }
+                    legend: { display: false }
                 },
                 scales: {
                     y: { grid: { color: gridColor }, ticks: { color: textColor } },
@@ -436,7 +442,6 @@
                 data: {
                     labels: timelineSortedKeys.map(date => moment(date).format('MMM DD, YY')),
                     datasets: [{
-                        label: 'Messages',
                         data: timelineSortedKeys.map(k => timelineData[k]),
                         borderColor: '#22c55e',
                         backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -449,7 +454,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { 
-                        legend: { labels: { color: textColor } },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -478,7 +483,7 @@
                 type: 'bar',
                 data: {
                     labels: topParticipants,
-                    datasets: [{ label: 'Messages', data: topParticipants.map(p => participants[p].count), backgroundColor: '#3b82f6' }]
+                    datasets: [{ data: topParticipants.map(p => participants[p].count), backgroundColor: '#3b82f6' }]
                 },
                 options: { ...commonOptions, indexAxis: 'y' }
             });
@@ -487,7 +492,7 @@
                 type: 'bar',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{ label: 'Messages', data: hourlyData, backgroundColor: '#a855f7' }]
+                    datasets: [{ data: hourlyData, backgroundColor: '#a855f7' }]
                 },
                 options: commonOptions
             });
@@ -498,7 +503,7 @@
             const maxMessages = Math.max(...heatmapData.flat());
 
             const heatmapTable = document.createElement('table');
-            heatmapTable.className = 'table-auto border-collapse border border-gray-200 dark:border-gray-700 mx-auto';
+            heatmapTable.className = 'table-auto border-collapse border border-gray-200 dark:border-gray-700';
 
             let headerHtml = '<thead><tr><th class="p-1 text-xs text-gray-500 dark:text-gray-400"></th>';
             hoursOfDay.forEach(hour => {
@@ -516,7 +521,7 @@
                     const intensity = maxMessages > 0 ? (count / maxMessages) : 0;
                     const bgColor = `rgba(34, 197, 94, ${intensity + 0.1})`; 
                     const textColor = intensity > 0.5 ? '#fff' : (isDarkMode ? '#f1f5f9' : '#1f2937');
-                    bodyHtml += `<td class="p-1 w-8 h-8 text-center text-xs font-medium rounded-sm" style="background-color: ${bgColor}; color: ${textColor};">${count > 0 ? count : ''}</td>`;
+                    bodyHtml += `<td class="p-1 w-6 h-6 sm:w-8 sm:h-8 text-center text-[10px] sm:text-xs font-medium rounded-sm" style="background-color: ${bgColor}; color: ${textColor};">${count > 0 ? count : ''}</td>`;
                 });
                 bodyHtml += '</tr>';
             });
@@ -529,7 +534,7 @@
                 type: 'bar',
                 data: {
                     labels: weekDaysFull,
-                    datasets: [{ label: 'Messages', data: weeklyData, backgroundColor: '#f97316' }]
+                    datasets: [{ data: weeklyData, backgroundColor: '#f97316' }]
                 },
                 options: commonOptions
             });

@@ -14,6 +14,7 @@ A local, private web application to analyze WhatsApp chat exports. All processin
 - **Filtering**:
     - **Participant Filter**: Use checkboxes to include or exclude specific participants from the analysis.
     - **Time Range**: Set start and end dates with an aesthetic date-picker interface.
+- **Mobile Friendly**: Optimized charts and tables for better visualization on mobile devices.
 
 ## How to use
 
