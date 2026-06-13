@@ -1,3 +1,7 @@
+## ⚠️ Project No Longer Maintained
+
+This project is an activity of the past and is no longer being actively developed or maintained. 
+
 # WhatsApp Chat Analyzer
 
 A local, private web application to analyze WhatsApp chat exports. All processing is done entirely in your browser; your chat data never leaves your computer.
